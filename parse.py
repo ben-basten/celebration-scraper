@@ -201,7 +201,7 @@ def fmt_day_label(iso_date: str, cal_label: str) -> str:
 # Mode 1: movies by day
 # ---------------------------------------------------------------------------
 
-def mode_days(data: list[dict], day_pairs: list[tuple[str, str]]) -> None:
+def mode_days(data: list[dict], day_pairs: list[tuple[str, str]], hide_times: bool = False) -> None:
     # Build: iso_date -> list of (title, runtime, sorted_showtimes)
     for iso_date, cal_label in day_pairs:
         # Collect movies that have showtimes on this date
@@ -231,11 +231,12 @@ def mode_days(data: list[dict], day_pairs: list[tuple[str, str]]) -> None:
             if runtime:
                 title_line += f"  [{runtime}]"
             print(title_line)
-            times_str = "  ".join(
-                f"{fmt_time(s['Showtime'])} ({s.get('FormatCode', '?')})"
-                for s in showtimes
-            )
-            print(f"    {times_str}")
+            if not hide_times:
+                times_str = "  ".join(
+                    f"{fmt_time(s['Showtime'])} ({s.get('FormatCode', '?')})"
+                    for s in showtimes
+                )
+                print(f"    {times_str}")
         print()
 
 
@@ -243,7 +244,7 @@ def mode_days(data: list[dict], day_pairs: list[tuple[str, str]]) -> None:
 # Mode 2: showtimes by movie
 # ---------------------------------------------------------------------------
 
-def mode_movie(data: list[dict], query: str, day_pairs: list[tuple[str, str]]) -> None:
+def mode_movie(data: list[dict], query: str, day_pairs: list[tuple[str, str]], hide_times: bool = False) -> None:
     query_lower = query.lower()
     matches = [m for m in data if query_lower in m.get("Title", "").lower()]
 
@@ -283,12 +284,13 @@ def mode_movie(data: list[dict], query: str, day_pairs: list[tuple[str, str]]) -
             cal_label = day_label_map.get(iso_date, "")
             heading = fmt_day_label(iso_date, cal_label)
             print(f"  {heading}")
-            showtimes = sorted(by_date[iso_date], key=lambda s: s["Showtime"])
-            times_str = "  ".join(
-                f"{fmt_time(s['Showtime'])} ({s.get('FormatCode', '?')})"
-                for s in showtimes
-            )
-            print(f"    {times_str}")
+            if not hide_times:
+                showtimes = sorted(by_date[iso_date], key=lambda s: s["Showtime"])
+                times_str = "  ".join(
+                    f"{fmt_time(s['Showtime'])} ({s.get('FormatCode', '?')})"
+                    for s in showtimes
+                )
+                print(f"    {times_str}")
         print()
 
 
@@ -315,6 +317,11 @@ def main() -> None:
         nargs="+",
         metavar="DAY",
         help="Days to show: today tomorrow mon tue wed thu fri sat sun",
+    )
+    parser.add_argument(
+        "--no-times",
+        action="store_true",
+        help="Hide showtimes, listing only movie titles per day",
     )
     parser.add_argument(
         "--weeks",
@@ -349,9 +356,9 @@ def main() -> None:
     print()
 
     if args.movie:
-        mode_movie(movie_data, args.movie, day_pairs)
+        mode_movie(movie_data, args.movie, day_pairs, hide_times=args.no_times)
     else:
-        mode_days(movie_data, day_pairs)
+        mode_days(movie_data, day_pairs, hide_times=args.no_times)
 
 
 if __name__ == "__main__":

@@ -17,7 +17,7 @@ import json
 import re
 import sys
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timezone
 
 import requests
 from bs4 import BeautifulSoup
@@ -186,6 +186,16 @@ def fmt_time(iso_datetime: str) -> str:
     return dt.strftime("%-I:%M %p")
 
 
+def is_future(iso_datetime: str) -> bool:
+    """Return True if the showtime is in the future."""
+    dt = datetime.fromisoformat(iso_datetime)
+    now = datetime.now(timezone.utc)
+    # Make naive datetimes timezone-aware (assume local)
+    if dt.tzinfo is None:
+        dt = dt.astimezone()
+    return dt > now
+
+
 def fmt_day_label(iso_date: str, cal_label: str) -> str:
     """Return a friendly day heading like 'Friday, May 16  (Today)'."""
     dt = datetime.fromisoformat(iso_date)
@@ -210,7 +220,7 @@ def mode_days(data: list[dict], day_pairs: list[tuple[str, str]], hide_times: bo
             title = movie.get("Title", "Unknown")
             showtimes_on_day = [
                 s for s in movie.get("Showtime", [])
-                if s.get("Date", "")[:10] == iso_date
+                if s.get("Date", "")[:10] == iso_date and is_future(s["Showtime"])
             ]
             if not showtimes_on_day:
                 continue
@@ -263,7 +273,7 @@ def mode_movie(data: list[dict], query: str, day_pairs: list[tuple[str, str]], h
         by_date: dict[str, list] = defaultdict(list)
         for s in all_showtimes:
             d = s.get("Date", "")[:10]
-            if d in day_set:
+            if d in day_set and is_future(s["Showtime"]):
                 by_date[d].append(s)
 
         if not by_date:

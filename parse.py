@@ -1,20 +1,28 @@
 #!/usr/bin/env python3
 """
-Fetches the Celebration Cinema page, extracts the ng-init data object
-containing calendarDates, data, films, cinemas, etc., parses each
-stringified JSON field, and writes the result to output.json.
+Celebration Cinema showtime scraper.
+
+Mode 1 — movies by day (default):
+    python parse.py [--days fri sat sun ...]
+
+Mode 2 — showtimes for a specific movie:
+    python parse.py --movie "mortal kombat" [--days fri sat sun ...]
+
+Supported day names: today, tomorrow, mon, tue, wed, thu, fri, sat, sun
+Omitting --days shows all available days (up to 7 from today).
 """
 
-import html
+import argparse
 import json
 import re
 import sys
+from collections import defaultdict
+from datetime import datetime
 
 import requests
 from bs4 import BeautifulSoup
 
 URL = "https://www.celebrationcinema.com/cinemas/celebration-cinema-crossroads"
-OUTPUT_FILE = "output.json"
 HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -23,6 +31,16 @@ HEADERS = {
     )
 }
 
+# Maps 3-letter day names (and aliases) to Python weekday integers (Mon=0)
+DAY_NAME_TO_WEEKDAY = {
+    "mon": 0, "tue": 1, "wed": 2, "thu": 3,
+    "fri": 4, "sat": 5, "sun": 6,
+}
+
+
+# ---------------------------------------------------------------------------
+# Fetching & parsing
+# ---------------------------------------------------------------------------
 
 def fetch_html(url: str) -> str:
     resp = requests.get(url, headers=HEADERS, timeout=30)
@@ -31,27 +49,17 @@ def fetch_html(url: str) -> str:
 
 
 def extract_ng_init(page_html: str) -> str:
-    """Return the raw (HTML-unescaped) value of the ng-init attribute that
-    contains the init({...}) call described in the README."""
     soup = BeautifulSoup(page_html, "html.parser")
-
-    # Find the tag whose ng-init begins with "init("
     tag = soup.find(attrs={"ng-init": re.compile(r"init\s*\(")})
     if not tag:
         sys.exit("Could not find ng-init tag with init() call.")
-
-    # BeautifulSoup already unescapes HTML entities in attribute values
     return tag["ng-init"]
 
 
 def parse_init_object(ng_init: str) -> dict:
-    """Extract the first argument to init() — the object with calendarDates,
-    data, films, cinemas, etc. — and parse each of its stringified JSON fields."""
-
-    # Find where the opening '{' of the first argument starts
+    """Extract and fully parse the first object argument to init(...)."""
     start = ng_init.index("{")
 
-    # Walk the string to find the matching closing '}' (respecting nesting and strings)
     depth = 0
     in_string = False
     escape = False
@@ -78,21 +86,17 @@ def parse_init_object(ng_init: str) -> dict:
 
     obj_str = ng_init[start:end + 1]
 
-    # The object values are JSON strings (stringified JSON).
-    # json.loads the whole thing first to get the raw escaped strings.
     try:
         raw_obj = json.loads(obj_str)
     except json.JSONDecodeError as exc:
         sys.exit(f"Failed to JSON-parse the init object: {exc}")
 
-    # Now parse each value that is itself a JSON string
     parsed = {}
     for key, value in raw_obj.items():
         if isinstance(value, str):
             try:
                 parsed[key] = json.loads(value)
             except json.JSONDecodeError:
-                # Keep as-is if it's not valid JSON
                 parsed[key] = value
         else:
             parsed[key] = value
@@ -100,22 +104,239 @@ def parse_init_object(ng_init: str) -> dict:
     return parsed
 
 
-def main():
-    print(f"Fetching {URL} ...")
+def fetch_data() -> dict:
+    print(f"Fetching {URL} ...", file=sys.stderr)
     page_html = fetch_html(URL)
-
-    print("Extracting ng-init data ...")
     ng_init = extract_ng_init(page_html)
+    return parse_init_object(ng_init)
 
-    print("Parsing init() object and stringified JSON fields ...")
-    result = parse_init_object(ng_init)
 
-    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
-        json.dump(result, f, indent=2, ensure_ascii=False)
+# ---------------------------------------------------------------------------
+# Day resolution
+# ---------------------------------------------------------------------------
 
-    keys = list(result.keys())
-    print(f"Done. Parsed keys: {keys}")
-    print(f"Output written to: {OUTPUT_FILE}")
+def resolve_days(requested: list[str], calendar_dates: list[dict]) -> list[tuple[str, str]]:
+    """
+    Given a list of day name tokens and the calendarDates list from the API,
+    return an ordered list of (iso_date, label) pairs for the matched days,
+    in calendar order.
+
+    calendar_dates entries: {"Text": "Today", "Moment": "2026-05-14T00:00:00", "ID": 0}
+    """
+    # Build lookup structures from calendarDates
+    # iso_date -> label
+    cal_by_date: dict[str, str] = {}
+    for entry in calendar_dates:
+        iso = entry["Moment"][:10]  # "2026-05-14"
+        cal_by_date[iso] = entry["Text"]
+
+    # Ordered list of iso dates available
+    available_dates = sorted(cal_by_date.keys())
+    # today is first available date
+    today_iso = available_dates[0] if available_dates else None
+
+    # Resolve requested tokens -> set of iso dates
+    matched: dict[str, str] = {}  # iso -> label, preserving calendar order later
+
+    for token in requested:
+        token = token.lower()
+        if token == "today":
+            if today_iso:
+                matched[today_iso] = cal_by_date[today_iso]
+        elif token == "tomorrow":
+            tomorrow_candidates = available_dates[1:2]
+            for d in tomorrow_candidates:
+                matched[d] = cal_by_date[d]
+        elif token in DAY_NAME_TO_WEEKDAY:
+            target_wd = DAY_NAME_TO_WEEKDAY[token]
+            for iso in available_dates:
+                dt = datetime.fromisoformat(iso)
+                if dt.weekday() == target_wd:
+                    matched[iso] = cal_by_date[iso]
+                    break
+        else:
+            print(f"Warning: unknown day '{token}' (use today/tomorrow/mon/tue/wed/thu/fri/sat/sun)", file=sys.stderr)
+
+    # Return in calendar order
+    return [(iso, matched[iso]) for iso in available_dates if iso in matched]
+
+
+def all_days(calendar_dates: list[dict]) -> list[tuple[str, str]]:
+    """Return all available (iso_date, label) pairs in order."""
+    pairs = []
+    for entry in sorted(calendar_dates, key=lambda e: e["Moment"]):
+        iso = entry["Moment"][:10]
+        pairs.append((iso, entry["Text"]))
+    return pairs
+
+
+# ---------------------------------------------------------------------------
+# Formatting helpers
+# ---------------------------------------------------------------------------
+
+def fmt_time(iso_datetime: str) -> str:
+    """Convert ISO datetime string to '5:35 PM'."""
+    dt = datetime.fromisoformat(iso_datetime)
+    return dt.strftime("%-I:%M %p")
+
+
+def fmt_day_label(iso_date: str, cal_label: str) -> str:
+    """Return a friendly day heading like 'Friday, May 16  (Today)'."""
+    dt = datetime.fromisoformat(iso_date)
+    weekday = dt.strftime("%A")
+    month_day = dt.strftime("%B %-d")
+    # Append calendar label if it's not just a date string
+    if cal_label in ("Today", "Tomorrow"):
+        return f"{weekday}, {month_day}  ({cal_label})"
+    return f"{weekday}, {month_day}"
+
+
+# ---------------------------------------------------------------------------
+# Mode 1: movies by day
+# ---------------------------------------------------------------------------
+
+def mode_days(data: list[dict], day_pairs: list[tuple[str, str]]) -> None:
+    # Build: iso_date -> list of (title, runtime, sorted_showtimes)
+    for iso_date, cal_label in day_pairs:
+        # Collect movies that have showtimes on this date
+        movies_on_day = []
+        for movie in data:
+            title = movie.get("Title", "Unknown")
+            showtimes_on_day = [
+                s for s in movie.get("Showtime", [])
+                if s.get("Date", "")[:10] == iso_date
+            ]
+            if not showtimes_on_day:
+                continue
+            runtime = showtimes_on_day[0].get("RunTime", "")
+            showtimes_on_day.sort(key=lambda s: s["Showtime"])
+            movies_on_day.append((title, runtime, showtimes_on_day))
+
+        if not movies_on_day:
+            continue
+
+        movies_on_day.sort(key=lambda m: m[0])
+
+        heading = fmt_day_label(iso_date, cal_label)
+        print(heading)
+        print("-" * len(heading))
+        for title, runtime, showtimes in movies_on_day:
+            title_line = f"  {title}"
+            if runtime:
+                title_line += f"  [{runtime}]"
+            print(title_line)
+            times_str = "  ".join(
+                f"{fmt_time(s['Showtime'])} ({s.get('FormatCode', '?')})"
+                for s in showtimes
+            )
+            print(f"    {times_str}")
+        print()
+
+
+# ---------------------------------------------------------------------------
+# Mode 2: showtimes by movie
+# ---------------------------------------------------------------------------
+
+def mode_movie(data: list[dict], query: str, day_pairs: list[tuple[str, str]]) -> None:
+    query_lower = query.lower()
+    matches = [m for m in data if query_lower in m.get("Title", "").lower()]
+
+    if not matches:
+        print(f"No movies found matching '{query}'.")
+        return
+
+    day_set = {iso for iso, _ in day_pairs}
+    day_label_map = {iso: label for iso, label in day_pairs}
+
+    for movie in matches:
+        title = movie.get("Title", "Unknown")
+        all_showtimes = movie.get("Showtime", [])
+
+        # Group showtimes by date, filtered to requested days
+        by_date: dict[str, list] = defaultdict(list)
+        for s in all_showtimes:
+            d = s.get("Date", "")[:10]
+            if d in day_set:
+                by_date[d].append(s)
+
+        if not by_date:
+            print(f"{title}  — no showtimes on requested days.")
+            print()
+            continue
+
+        # Get runtime from first showtime
+        first = next(iter(s for s in all_showtimes if s.get("RunTime")), None)
+        runtime = first.get("RunTime", "") if first else ""
+
+        title_line = title
+        if runtime:
+            title_line += f"  [{runtime}]"
+        print(title_line)
+
+        for iso_date in sorted(by_date.keys()):
+            cal_label = day_label_map.get(iso_date, "")
+            heading = fmt_day_label(iso_date, cal_label)
+            print(f"  {heading}")
+            showtimes = sorted(by_date[iso_date], key=lambda s: s["Showtime"])
+            times_str = "  ".join(
+                f"{fmt_time(s['Showtime'])} ({s.get('FormatCode', '?')})"
+                for s in showtimes
+            )
+            print(f"    {times_str}")
+        print()
+
+
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Celebration Cinema showtime scraper.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Examples:\n"
+            "  python parse.py\n"
+            "  python parse.py --days fri sat sun\n"
+            "  python parse.py --movie 'mortal kombat'\n"
+            "  python parse.py --movie 'mortal kombat' --days fri sat sun\n"
+        ),
+    )
+    parser.add_argument(
+        "--days",
+        nargs="+",
+        metavar="DAY",
+        help="Days to show: today tomorrow mon tue wed thu fri sat sun",
+    )
+    parser.add_argument(
+        "--movie",
+        metavar="TITLE",
+        help="Movie title search (case-insensitive substring match)",
+    )
+    args = parser.parse_args()
+
+    result = fetch_data()
+    calendar_dates = result.get("calendarDates", [])
+    movie_data = result.get("data", [])
+
+    if not calendar_dates:
+        sys.exit("No calendarDates found in page data.")
+    if not movie_data:
+        sys.exit("No movie data found in page data.")
+
+    if args.days:
+        day_pairs = resolve_days(args.days, calendar_dates)
+        if not day_pairs:
+            sys.exit("None of the requested days are available in the schedule.")
+    else:
+        day_pairs = all_days(calendar_dates)
+
+    print()
+
+    if args.movie:
+        mode_movie(movie_data, args.movie, day_pairs)
+    else:
+        mode_days(movie_data, day_pairs)
 
 
 if __name__ == "__main__":

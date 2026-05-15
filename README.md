@@ -4,6 +4,81 @@ Scrape all upcoming films and showtimes from the celebration cinema movie theate
 
 URL: https://www.celebrationcinema.com/cinemas/celebration-cinema-crossroads
 
+## Usage
+
+```
+python parse.py [--days DAY ...] [--movie TITLE]
+```
+
+Always fetches live data from the site.
+
+### Arguments
+
+| Argument | Description |
+|---|---|
+| `--days` | One or more day names to filter by (see below). Omit to show all available days. |
+| `--movie` | Movie title search string (case-insensitive substring match). Omit to list all movies. |
+
+**Accepted day names:** `today` `tomorrow` `mon` `tue` `wed` `thu` `fri` `sat` `sun`
+
+---
+
+### Mode 1 — movies by day
+
+List all movies playing on the given days, grouped by day. Movies are sorted alphabetically within each day.
+
+```
+python parse.py --days fri sat sun
+```
+
+Output:
+
+```
+Friday, May 16
+--------------
+  Mortal Kombat II  [1h 56m]
+    10:30 AM (IMAX 2D)  12:05 PM (2D)  1:15 PM (IMAX 2D)  ...
+
+  The Devil Wears Prada 2  [2h 0m]
+    10:25 AM (2D)  1:15 PM (2D)  ...
+```
+
+Omit `--days` to show all available days (typically ~2 weeks out):
+
+```
+python parse.py
+```
+
+---
+
+### Mode 2 — showtimes for a specific movie
+
+Pick a movie and see its showtimes grouped by day. Uses a case-insensitive substring match — if multiple titles match, all are shown.
+
+```
+python parse.py --movie "mortal kombat" --days fri sat sun
+```
+
+Output:
+
+```
+Mortal Kombat II  [1h 56m]
+  Friday, May 16
+    10:30 AM (IMAX 2D)  12:05 PM (2D)  1:15 PM (IMAX 2D)  ...
+  Saturday, May 17
+    12:05 PM (2D)  1:05 PM (IMAX 2D)  ...
+  Sunday, May 18
+    12:05 PM (2D | Open Captioning)  1:15 PM (IMAX 2D)  ...
+```
+
+Omit `--days` to show showtimes across all available dates:
+
+```
+python parse.py --movie "mortal kombat"
+```
+
+---
+
 The site is built in Angular, and all of the movie data is included in a stringified JSON object in the Angular `ng-init` function.
 
 The data size is very large, so here is a truncated example of what the data looks like:

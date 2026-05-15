@@ -16,7 +16,8 @@ Always fetches live data from the site.
 
 | Argument | Description |
 |---|---|
-| `--days` | One or more day names to filter by (see below). Omit to show all available days. |
+| `--days` | One or more day names to filter by (see below). Omit to show all days within the `--weeks` window. |
+| `--weeks` | How many weeks out to look (default: `1`). |
 | `--movie` | Movie title search string (case-insensitive substring match). Omit to list all movies. |
 
 **Accepted day names:** `today` `tomorrow` `mon` `tue` `wed` `thu` `fri` `sat` `sun`
@@ -25,10 +26,11 @@ Always fetches live data from the site.
 
 ### Mode 1 — movies by day
 
-List all movies playing on the given days, grouped by day. Movies are sorted alphabetically within each day.
+List all movies playing on the given days, grouped by day. Movies are sorted alphabetically within each day. Defaults to 1 week out; use `--weeks` to expand the window.
 
 ```
 python parse.py --days fri sat sun
+python parse.py --days fri sat sun --weeks 2
 ```
 
 Output:
@@ -43,10 +45,11 @@ Friday, May 16
     10:25 AM (2D)  1:15 PM (2D)  ...
 ```
 
-Omit `--days` to show all available days (typically ~2 weeks out):
+Omit `--days` to show all days within the window (default 1 week, use `--weeks N` to expand):
 
 ```
 python parse.py
+python parse.py --weeks 2
 ```
 
 ---
@@ -71,10 +74,11 @@ Mortal Kombat II  [1h 56m]
     12:05 PM (2D | Open Captioning)  1:15 PM (IMAX 2D)  ...
 ```
 
-Omit `--days` to show showtimes across all available dates:
+Omit `--days` to show showtimes across all days within the window (use `--weeks N` to expand):
 
 ```
 python parse.py --movie "mortal kombat"
+python parse.py --movie "mortal kombat" --weeks 2
 ```
 
 ---

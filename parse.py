@@ -3,13 +3,13 @@
 Celebration Cinema showtime scraper.
 
 Mode 1 — movies by day (default):
-    python parse.py [--days fri sat sun ...]
+    python parse.py [--days fri sat sun ...] [--weeks N]
 
 Mode 2 — showtimes for a specific movie:
-    python parse.py --movie "mortal kombat" [--days fri sat sun ...]
+    python parse.py --movie "mortal kombat" [--days fri sat sun ...] [--weeks N]
 
 Supported day names: today, tomorrow, mon, tue, wed, thu, fri, sat, sun
-Omitting --days shows all available days (up to 7 from today).
+Omitting --days shows all days within the --weeks window (default: 1 week).
 """
 
 import argparse
@@ -115,14 +115,17 @@ def fetch_data() -> dict:
 # Day resolution
 # ---------------------------------------------------------------------------
 
-def resolve_days(requested: list[str], calendar_dates: list[dict]) -> list[tuple[str, str]]:
+def resolve_days(requested: list[str], calendar_dates: list[dict], weeks: int = 1) -> list[tuple[str, str]]:
     """
     Given a list of day name tokens and the calendarDates list from the API,
     return an ordered list of (iso_date, label) pairs for the matched days,
-    in calendar order.
+    in calendar order, within the given number of weeks from today.
 
     calendar_dates entries: {"Text": "Today", "Moment": "2026-05-14T00:00:00", "ID": 0}
     """
+    from datetime import date, timedelta
+    cutoff = (date.today() + timedelta(weeks=weeks)).isoformat()
+
     # Build lookup structures from calendarDates
     # iso_date -> label
     cal_by_date: dict[str, str] = {}
@@ -130,10 +133,10 @@ def resolve_days(requested: list[str], calendar_dates: list[dict]) -> list[tuple
         iso = entry["Moment"][:10]  # "2026-05-14"
         cal_by_date[iso] = entry["Text"]
 
-    # Ordered list of iso dates available
-    available_dates = sorted(cal_by_date.keys())
+    # Ordered list of iso dates available within the window
+    available_dates = [d for d in sorted(cal_by_date.keys()) if d <= cutoff]
     # today is first available date
-    today_iso = available_dates[0] if available_dates else None
+    today_iso = sorted(cal_by_date.keys())[0] if cal_by_date else None
 
     # Resolve requested tokens -> set of iso dates
     matched: dict[str, str] = {}  # iso -> label, preserving calendar order later
@@ -161,12 +164,15 @@ def resolve_days(requested: list[str], calendar_dates: list[dict]) -> list[tuple
     return [(iso, matched[iso]) for iso in available_dates if iso in matched]
 
 
-def all_days(calendar_dates: list[dict]) -> list[tuple[str, str]]:
-    """Return all available (iso_date, label) pairs in order."""
+def all_days(calendar_dates: list[dict], weeks: int = 1) -> list[tuple[str, str]]:
+    """Return available (iso_date, label) pairs within the given number of weeks from today."""
+    from datetime import date, timedelta
+    cutoff = (date.today() + timedelta(weeks=weeks)).isoformat()
     pairs = []
     for entry in sorted(calendar_dates, key=lambda e: e["Moment"]):
         iso = entry["Moment"][:10]
-        pairs.append((iso, entry["Text"]))
+        if iso <= cutoff:
+            pairs.append((iso, entry["Text"]))
     return pairs
 
 
@@ -298,8 +304,10 @@ def main() -> None:
             "Examples:\n"
             "  python parse.py\n"
             "  python parse.py --days fri sat sun\n"
+            "  python parse.py --weeks 2\n"
             "  python parse.py --movie 'mortal kombat'\n"
             "  python parse.py --movie 'mortal kombat' --days fri sat sun\n"
+            "  python parse.py --movie 'mortal kombat' --weeks 2\n"
         ),
     )
     parser.add_argument(
@@ -307,6 +315,13 @@ def main() -> None:
         nargs="+",
         metavar="DAY",
         help="Days to show: today tomorrow mon tue wed thu fri sat sun",
+    )
+    parser.add_argument(
+        "--weeks",
+        type=int,
+        default=1,
+        metavar="N",
+        help="How many weeks out to look (default: 1)",
     )
     parser.add_argument(
         "--movie",
@@ -325,11 +340,11 @@ def main() -> None:
         sys.exit("No movie data found in page data.")
 
     if args.days:
-        day_pairs = resolve_days(args.days, calendar_dates)
+        day_pairs = resolve_days(args.days, calendar_dates, weeks=args.weeks)
         if not day_pairs:
             sys.exit("None of the requested days are available in the schedule.")
     else:
-        day_pairs = all_days(calendar_dates)
+        day_pairs = all_days(calendar_dates, weeks=args.weeks)
 
     print()
 

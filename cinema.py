@@ -267,8 +267,6 @@ def mode_movie(data: list[dict], query: str, day_pairs: list[tuple[str, str]], h
                 by_date[d].append(s)
 
         if not by_date:
-            print(f"{title}  — no showtimes on requested days.")
-            print()
             continue
 
         # Get runtime from first showtime

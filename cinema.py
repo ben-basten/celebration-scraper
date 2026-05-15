@@ -3,10 +3,10 @@
 Celebration Cinema showtime scraper.
 
 Mode 1 — movies by day (default):
-    python parse.py [--days fri sat sun ...] [--weeks N]
+    python cinema.py [--days fri sat sun ...] [--weeks N]
 
 Mode 2 — showtimes for a specific movie:
-    python parse.py --movie "mortal kombat" [--days fri sat sun ...] [--weeks N]
+    python cinema.py --movie "mortal kombat" [--days fri sat sun ...] [--weeks N]
 
 Supported day names: today, tomorrow, mon, tue, wed, thu, fri, sat, sun
 Omitting --days shows all days within the --weeks window (default: 1 week).
@@ -304,12 +304,12 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "Examples:\n"
-            "  python parse.py\n"
-            "  python parse.py --days fri sat sun\n"
-            "  python parse.py --weeks 2\n"
-            "  python parse.py --movie 'mortal kombat'\n"
-            "  python parse.py --movie 'mortal kombat' --days fri sat sun\n"
-            "  python parse.py --movie 'mortal kombat' --weeks 2\n"
+            "  python cinema.py\n"
+            "  python cinema.py --days fri sat sun\n"
+            "  python cinema.py --weeks 2\n"
+            "  python cinema.py --movie 'mortal kombat'\n"
+            "  python cinema.py --movie 'mortal kombat' --days fri sat sun\n"
+            "  python cinema.py --movie 'mortal kombat' --weeks 2\n"
         ),
     )
     parser.add_argument(

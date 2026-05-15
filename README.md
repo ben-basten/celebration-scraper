@@ -9,7 +9,7 @@ URL: https://www.celebrationcinema.com/cinemas/celebration-cinema-crossroads
 ### Mode 1 — what's playing this weekend?
 
 ```
-python parse.py --days fri sat sun --no-times
+python cinema.py --days fri sat sun --no-times
 ```
 
 ```
@@ -31,7 +31,7 @@ Saturday, May 17
 ### Mode 2 — showtimes for a specific movie
 
 ```
-python parse.py --movie "mortal kombat" --days fri sat sun
+python cinema.py --movie "mortal kombat" --days fri sat sun
 ```
 
 ```

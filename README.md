@@ -336,7 +336,6 @@ Once it's parsed, the data model looks like this. Abbreviated each field down to
             "OverrideShowtimeIconKeyOrder": 0
           }
         ]
-        ]
       },
       "Cinemas": null,
       "Dates": null,
@@ -379,6 +378,6 @@ Once it's parsed, the data model looks like this. Abbreviated each field down to
       "LocationPhoto": null,
       "DetailUrl": "/cinemas/Getty-Drive-In"
     }
-  ]
+  }
 }
 ```

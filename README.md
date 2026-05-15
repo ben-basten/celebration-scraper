@@ -4,6 +4,11 @@ Scrape all upcoming films and showtimes from the celebration cinema movie theate
 
 URL: https://www.celebrationcinema.com/cinemas/celebration-cinema-crossroads
 
+## Setup
+
+1. `python3 -m venv ./.venv`
+2. `source ./.venv/bin/activate`
+
 ## Usage
 
 ### Mode 1 — what's playing this weekend?

@@ -40,9 +40,9 @@ type CalendarDate struct {
 }
 
 type Showtime struct {
-	Date     string  `json:"Date"`
-	Showtime string  `json:"Showtime"`
-	RunTime  string  `json:"RunTime"`
+	Date       string `json:"Date"`
+	Showtime   string `json:"Showtime"`
+	RunTime    string `json:"RunTime"`
 	FormatCode string `json:"FormatCode"`
 }
 

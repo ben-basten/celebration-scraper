@@ -473,8 +473,8 @@ var (
 var Version = "dev"
 
 func main() {
-	flag.StringVar(&daysFlag, "days", "", "Comma separated days: today tomorrow mon tue wed thu fri sat sun")
-	flag.IntVar(&weeksFlag, "weeks", 1, "How many weeks out to look (default: 1)")
+	flag.StringVar(&daysFlag, "days", "", "Comma or space separated days: today tomorrow mon tue wed thu fri sat sun")
+	flag.IntVar(&weeksFlag, "weeks", 1, "How many weeks out to look")
 	flag.StringVar(&movieFlag, "movie", "", "Movie title search (case-insensitive substring match)")
 	flag.BoolVar(&noTimes, "no-times", false, "Hide showtimes, show titles only")
 	flag.BoolVar(&versionFlag, "v", false, "Show version")

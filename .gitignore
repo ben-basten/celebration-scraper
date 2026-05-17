@@ -2,3 +2,4 @@
 output.json
 .venv
 cinema
+dist/

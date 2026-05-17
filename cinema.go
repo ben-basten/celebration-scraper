@@ -17,7 +17,7 @@ import (
 
 const siteURL = "https://www.celebrationcinema.com/cinemas/celebration-cinema-crossroads"
 
-var userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+var userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
 
 var dayNameToWeekday = map[string]time.Weekday{
 	"sun": time.Sunday,

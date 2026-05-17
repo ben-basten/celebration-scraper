@@ -4,18 +4,7 @@ Scrape all upcoming films and showtimes from the celebration cinema movie theate
 
 URL: https://www.celebrationcinema.com/cinemas/celebration-cinema-crossroads
 
-## Setup
-
-1. `python3 -m venv ./.venv`
-2. `source ./.venv/bin/activate`
-
 ## Usage
-
-### Installation
-
-```bash
-go build -o cinema cinema.go
-```
 
 ### Mode 1 — what's playing this weekend?
 
@@ -57,12 +46,22 @@ Mortal Kombat II  [1h 56m]
 
 ## Options
 
-| Flag | Description |
-|---|---|
-| `--days` | `today` `tomorrow` `mon` `tue` `wed` `thu` `fri` `sat` `sun` |
-| `--weeks` | How many weeks out to look (default: `1`) |
-| `--movie` | Case-insensitive substring match on title |
-| `--no-times` | Hide showtimes, show titles only |
+| Flag         | Description                                                  |
+| ------------ | ------------------------------------------------------------ |
+| `--days`     | `today` `tomorrow` `mon` `tue` `wed` `thu` `fri` `sat` `sun` |
+| `--weeks`    | How many weeks out to look (default: `1`)                    |
+| `--movie`    | Case-insensitive substring match on title                    |
+| `--no-times` | Hide showtimes, show titles only                             |
+
+## Local development
+
+```bash
+# build locally
+go build -o cinema cinema.go
+
+# run the script without building
+go run cinema.go
+```
 
 ## Data source
 
@@ -140,7 +139,7 @@ Once it's parsed, the data model looks like this. Abbreviated each field down to
           "OverrideShowtimeIconKey": null,
           "OverrideShowtimeIconDescriptionKey": null,
           "OverrideShowtimeIconKeyOrder": 0
-        },
+        }
       ],
       "Title": "Mortal Kombat II",
       "Showtime": [
@@ -353,11 +352,7 @@ Once it's parsed, the data model looks like this. Abbreviated each field down to
       "Formats": null
     }
   ],
-  "dates": [
-    "2026-05-14",
-    "2026-05-15",
-    "2026-05-16"
-  ],
+  "dates": ["2026-05-14", "2026-05-15", "2026-05-16"],
   "films": {
     "HO00010340": {
       "Title": "Karuppu",

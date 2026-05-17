@@ -11,10 +11,16 @@ URL: https://www.celebrationcinema.com/cinemas/celebration-cinema-crossroads
 
 ## Usage
 
+### Installation
+
+```bash
+go build -o cinema cinema.go
+```
+
 ### Mode 1 — what's playing this weekend?
 
-```
-python cinema.py --days fri sat sun --no-times
+```bash
+./cinema --days "fri sat sun" --no-times
 ```
 
 ```
@@ -35,8 +41,8 @@ Saturday, May 17
 
 ### Mode 2 — showtimes for a specific movie
 
-```
-python cinema.py --movie "mortal kombat" --days fri sat sun
+```bash
+./cinema --movie "mortal kombat" --days "fri sat sun"
 ```
 
 ```

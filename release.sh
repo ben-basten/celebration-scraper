@@ -4,5 +4,5 @@ if [ -z "$1" ]; then
 fi
 
 VERSION=$1
-GOOS=darwin GOARCH=arm64 go build -ldflags="-X 'main.Version=${VERSION}'" -o dist/cinema-darwin-arm64 cinema.go
+GOOS=darwin GOARCH=arm64 go build -ldflags="-X 'main.Version=${VERSION}'" -o dist/cinema cinema.go
 GOOS=windows GOARCH=amd64 go build -ldflags="-X 'main.Version=${VERSION}'" -o dist/cinema.exe cinema.go

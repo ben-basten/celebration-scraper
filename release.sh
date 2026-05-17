@@ -3,6 +3,10 @@ if [ -z "$1" ]; then
   exit 1
 fi
 
+if [ -d "dist" ]; then
+  rm dist/*
+fi
+
 VERSION=$1
 GOOS=darwin GOARCH=arm64 go build -ldflags="-X 'main.Version=${VERSION}'" -o dist/cinema cinema.go
 GOOS=windows GOARCH=amd64 go build -ldflags="-X 'main.Version=${VERSION}'" -o dist/cinema.exe cinema.go

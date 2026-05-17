@@ -462,18 +462,22 @@ func modeMovie(movies []Movie, query string, pairs []DayPair, hideTimes bool) {
 // Main
 // ---------------------------------------------------------------------------
 
-func main() {
-	var (
-		daysFlag  string
-		weeksFlag int
-		movieFlag string
-		noTimes   bool
-	)
+var (
+	daysFlag    string
+	weeksFlag   int
+	movieFlag   string
+	noTimes     bool
+	versionFlag bool
+)
 
+var Version = "dev"
+
+func main() {
 	flag.StringVar(&daysFlag, "days", "", "Comma separated days: today tomorrow mon tue wed thu fri sat sun")
 	flag.IntVar(&weeksFlag, "weeks", 1, "How many weeks out to look (default: 1)")
 	flag.StringVar(&movieFlag, "movie", "", "Movie title search (case-insensitive substring match)")
 	flag.BoolVar(&noTimes, "no-times", false, "Hide showtimes, show titles only")
+	flag.BoolVar(&versionFlag, "v", false, "Show version")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, `Usage: cinema [options]
 
@@ -488,6 +492,11 @@ Options:
 		flag.PrintDefaults()
 	}
 	flag.Parse()
+
+	if versionFlag {
+		fmt.Println(Version)
+		return
+	}
 
 	data, err := fetchData()
 	if err != nil {
